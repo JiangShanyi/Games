@@ -56,57 +56,7 @@ struct Index {
       }
       .width('100%')
       .justifyContent(FlexAlign.End)
-      .margin({ top: 18, bottom: 18 })
-
-      Column() {
-        Button('Up')
-          .width(110)
-          .height(42)
-          .fontColor(Color.White)
-          .backgroundColor('#8F7A66')
-          .borderRadius(10)
-          .onClick(() => {
-            this.move(2)
-          })
-
-        Row() {
-          Button('Left')
-            .width(100)
-            .height(42)
-            .fontColor(Color.White)
-            .backgroundColor('#8F7A66')
-            .borderRadius(10)
-            .margin({ right: 10 })
-            .onClick(() => {
-              this.move(0)
-            })
-
-          Button('Right')
-            .width(100)
-            .height(42)
-            .fontColor(Color.White)
-            .backgroundColor('#8F7A66')
-            .borderRadius(10)
-            .margin({ left: 10 })
-            .onClick(() => {
-              this.move(1)
-            })
-        }
-        .margin({ top: 8, bottom: 8 })
-
-        Button('Down')
-          .width(110)
-          .height(42)
-          .fontColor(Color.White)
-          .backgroundColor('#8F7A66')
-          .borderRadius(10)
-          .onClick(() => {
-            this.move(3)
-          })
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Center)
-      .margin({ bottom: 20 })
+      .margin({ top: 18, bottom: 24 })
 
       Grid() {
         ForEach(this.cellIndexes, (index: number) => {
@@ -135,6 +85,12 @@ struct Index {
       .padding(10)
       .backgroundColor('#BBADA0')
       .borderRadius(16)
+      .gesture(
+        PanGesture({ direction: PanDirection.All, distance: 18 })
+          .onActionEnd((event) => {
+            this.handleSwipe(event.offsetX, event.offsetY)
+          })
+      )
     }
     .width('100%')
     .height('100%')
@@ -217,6 +173,29 @@ struct Index {
     }
 
     this.board = nextBoard
+  }
+
+  private handleSwipe(offsetX: number, offsetY: number): void {
+    let absX: number = Math.abs(offsetX)
+    let absY: number = Math.abs(offsetY)
+
+    if (absX < 20 && absY < 20) {
+      return
+    }
+
+    if (absX > absY) {
+      if (offsetX > 0) {
+        this.move(1)
+      } else {
+        this.move(0)
+      }
+    } else {
+      if (offsetY > 0) {
+        this.move(3)
+      } else {
+        this.move(2)
+      }
+    }
   }
 
   // direction:
