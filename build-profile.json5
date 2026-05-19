@@ -1,6 +1,20 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\jacky\\.ohos\\config\\default_Games_UqbSfu8TDpilI4KMHXmLMs4GDHNh0c8cznuCfJkPcPg=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BAE34F2DAC87AC28CBC630DDC9D8F84619398A2AA2B1705588746950852F94367F6B8BD766EA37A",
+          "profile": "C:\\Users\\jacky\\.ohos\\config\\default_Games_UqbSfu8TDpilI4KMHXmLMs4GDHNh0c8cznuCfJkPcPg=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\jacky\\.ohos\\config\\default_Games_UqbSfu8TDpilI4KMHXmLMs4GDHNh0c8cznuCfJkPcPg=.p12",
+          "storePassword": "0000001BF336F7D1005DA8BDE188CBB66775CEC97DB6667EA130DF61BEA748D4BE35CE50BEA8ADFD75D296"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",

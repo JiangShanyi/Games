@@ -8,14 +8,17 @@ struct Index {
     0, 0, 0, 0
   ]
 
-  @State score: number = 0;
-  @State bestScore: number = 0;
+  @State score: number = 0
+  @State bestScore: number = 0
+
   private cellIndexes: number[] = [
     0, 1, 2, 3,
     4, 5, 6, 7,
     8, 9, 10, 11,
     12, 13, 14, 15
   ]
+
+  private lastLineScore: number = 0
 
   aboutToAppear(): void {
     this.startNewGame()
@@ -29,19 +32,10 @@ struct Index {
             .fontSize(50)
             .fontWeight(FontWeight.Bold)
             .fontColor('#776E65')
-
-          Text('Swipe to join the numbers.')
-            .fontSize(16)
-            .fontColor('#8F7A66')
-            .margin({ top: 4 })
         }
-        .alignItems(HorizontalAlign.Center)
+        .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
 
-      Row() {
         Button('New Game')
           .height(44)
           .fontSize(15)
@@ -52,15 +46,67 @@ struct Index {
           .onClick(() => {
             this.startNewGame()
           })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
 
-        Row() {
-          this.ScoreBox('SCORE', this.score)
-          this.ScoreBox('BEST', this.bestScore)
-        }
+      Row() {
+        this.ScoreBox('SCORE', this.score)
+        this.ScoreBox('BEST', this.bestScore)
       }
       .width('100%')
       .justifyContent(FlexAlign.End)
-      .margin({ top: 18, bottom: 24 })
+      .margin({ top: 18, bottom: 18 })
+
+      Column() {
+        Button('Up')
+          .width(110)
+          .height(42)
+          .fontColor(Color.White)
+          .backgroundColor('#8F7A66')
+          .borderRadius(10)
+          .onClick(() => {
+            this.move(2)
+          })
+
+        Row() {
+          Button('Left')
+            .width(100)
+            .height(42)
+            .fontColor(Color.White)
+            .backgroundColor('#8F7A66')
+            .borderRadius(10)
+            .margin({ right: 10 })
+            .onClick(() => {
+              this.move(0)
+            })
+
+          Button('Right')
+            .width(100)
+            .height(42)
+            .fontColor(Color.White)
+            .backgroundColor('#8F7A66')
+            .borderRadius(10)
+            .margin({ left: 10 })
+            .onClick(() => {
+              this.move(1)
+            })
+        }
+        .margin({ top: 8, bottom: 8 })
+
+        Button('Down')
+          .width(110)
+          .height(42)
+          .fontColor(Color.White)
+          .backgroundColor('#8F7A66')
+          .borderRadius(10)
+          .onClick(() => {
+            this.move(3)
+          })
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Center)
+      .margin({ bottom: 20 })
 
       Grid() {
         ForEach(this.cellIndexes, (index: number) => {
@@ -89,11 +135,6 @@ struct Index {
       .padding(10)
       .backgroundColor('#BBADA0')
       .borderRadius(16)
-
-      Text('real board state')
-        .fontSize(16)
-        .fontColor('#776E65')
-        .margin({ top: 24 })
     }
     .width('100%')
     .height('100%')
@@ -166,7 +207,6 @@ struct Index {
     }
 
     let nextBoard: number[] = this.copyBoard(this.board)
-
     let randomPosition: number = Math.floor(Math.random() * emptyIndexes.length)
     let boardIndex: number = emptyIndexes[randomPosition]
 
@@ -177,6 +217,122 @@ struct Index {
     }
 
     this.board = nextBoard
+  }
+
+  // direction:
+  // 0 = left
+  // 1 = right
+  // 2 = up
+  // 3 = down
+  private move(direction: number): void {
+    let nextBoard: number[] = this.createEmptyBoard()
+    let gainedScore: number = 0
+
+    for (let i = 0; i < 4; i++) {
+      let line: number[] = this.readLine(i, direction)
+
+      if (direction === 1 || direction === 3) {
+        line = this.reverseLine(line)
+      }
+
+      let mergedLine: number[] = this.mergeLine(line)
+
+      gainedScore += this.lastLineScore
+
+      if (direction === 1 || direction === 3) {
+        mergedLine = this.reverseLine(mergedLine)
+      }
+
+      this.writeLine(nextBoard, i, direction, mergedLine)
+    }
+
+    if (!this.sameBoard(this.board, nextBoard)) {
+      this.board = nextBoard
+      this.score += gainedScore
+
+      if (this.score > this.bestScore) {
+        this.bestScore = this.score
+      }
+
+      this.addRandomTile()
+    }
+  }
+
+  private readLine(index: number, direction: number): number[] {
+    let line: number[] = []
+
+    for (let i = 0; i < 4; i++) {
+      if (direction === 0 || direction === 1) {
+        line.push(this.board[index * 4 + i])
+      } else {
+        line.push(this.board[i * 4 + index])
+      }
+    }
+
+    return line
+  }
+
+  private writeLine(target: number[], index: number, direction: number, line: number[]): void {
+    for (let i = 0; i < 4; i++) {
+      if (direction === 0 || direction === 1) {
+        target[index * 4 + i] = line[i]
+      } else {
+        target[i * 4 + index] = line[i]
+      }
+    }
+  }
+
+  private mergeLine(line: number[]): number[] {
+    let values: number[] = []
+    let result: number[] = []
+
+    this.lastLineScore = 0
+
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] !== 0) {
+        values.push(line[i])
+      }
+    }
+
+    let i: number = 0
+
+    while (i < values.length) {
+      if (i + 1 < values.length && values[i] === values[i + 1]) {
+        let mergedValue: number = values[i] * 2
+        result.push(mergedValue)
+        this.lastLineScore += mergedValue
+        i += 2
+      } else {
+        result.push(values[i])
+        i += 1
+      }
+    }
+
+    while (result.length < 4) {
+      result.push(0)
+    }
+
+    return result
+  }
+
+  private reverseLine(line: number[]): number[] {
+    let result: number[] = []
+
+    for (let i = line.length - 1; i >= 0; i--) {
+      result.push(line[i])
+    }
+
+    return result
+  }
+
+  private sameBoard(a: number[], b: number[]): boolean {
+    for (let i = 0; i < 16; i++) {
+      if (a[i] !== b[i]) {
+        return false
+      }
+    }
+
+    return true
   }
 
   private tileColor(value: number): string {
