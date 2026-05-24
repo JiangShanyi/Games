@@ -2,18 +2,28 @@
 export struct Game8TilePuzzlePage {
   onBackToMenu: () => void = () => {}
   @State boardValues: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 0]
-  @State moves: number = 0
-  @State bestMoves: number = 0
+  @State elapsedSeconds: number = 0
+  @State bestSeconds: number = 0
   @State gameStatus: string = 'playing'
   @State resultMessage: string = ''
+  @State isAnimating: boolean = false
+  private animationId: number = 0
+  private timerId: number = -1
+  private startedAt: number = 0
   private readonly TILE_SIZE: number = 88
   private readonly TILE_GAP: number = 10
   private readonly BOARD_PADDING: number = 10
   private readonly BOARD_SIZE: number = (this.TILE_SIZE * 3) + (this.TILE_GAP * 2) + (this.BOARD_PADDING * 2)
+  private readonly MOVE_DISTANCE: number = this.TILE_SIZE + this.TILE_GAP
   private readonly boardIndexes: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+  private readonly tileValues: number[] = [1, 2, 3, 4, 5, 6, 7, 8]
 
   aboutToAppear(): void {
     this.startNewGame()
+  }
+
+  aboutToDisappear(): void {
+    this.stopTimer()
   }
 
   build() {
@@ -36,8 +46,8 @@ export struct Game8TilePuzzlePage {
           .layoutWeight(1)
 
           Row() {
-            this.StatBox('MOVES', this.moves.toString(), '#335C67')
-            this.StatBox('BEST', this.bestMoves === 0 ? '--' : this.bestMoves.toString(), '#D95F4D')
+            this.TimeBox()
+            this.BestBox()
           }
           .alignItems(VerticalAlign.Center)
         }
@@ -84,35 +94,11 @@ export struct Game8TilePuzzlePage {
           Grid() {
             ForEach(this.boardIndexes, (index: number) => {
               GridItem() {
-                if (this.boardValues[index] === 0) {
-                  Column()
-                    .width('100%')
-                    .height('100%')
-                    .backgroundColor('#DCE7E1')
-                    .borderRadius(10)
-                } else {
-                  Column() {
-                    Text(this.boardValues[index].toString())
-                      .fontSize(36)
-                      .fontWeight(FontWeight.Bold)
-                      .fontColor('#253238')
-                  }
+                Column()
                   .width('100%')
                   .height('100%')
-                  .justifyContent(FlexAlign.Center)
-                  .alignItems(HorizontalAlign.Center)
-                  .backgroundColor(this.tileColor(this.boardValues[index]))
+                  .backgroundColor('#DCE7E1')
                   .borderRadius(10)
-                  .shadow({
-                    radius: 8,
-                    color: '#1E2A3040',
-                    offsetX: 0,
-                    offsetY: 3
-                  })
-                  .onClick(() => {
-                    this.handleTileTapByIndex(index)
-                  })
-                }
               }
             }, (index: number) => index.toString())
           }
@@ -122,6 +108,34 @@ export struct Game8TilePuzzlePage {
           .rowsGap(this.TILE_GAP)
           .width('100%')
           .height('100%')
+
+          ForEach(this.tileValues, (value: number) => {
+            Column() {
+              Text(value.toString())
+                .fontSize(36)
+                .fontWeight(FontWeight.Bold)
+                .fontColor('#253238')
+            }
+            .width(this.TILE_SIZE)
+            .height(this.TILE_SIZE)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center)
+            .backgroundColor(this.tileColor(value))
+            .borderRadius(10)
+            .position({
+              x: this.tileCol(value) * this.MOVE_DISTANCE,
+              y: this.tileRow(value) * this.MOVE_DISTANCE
+            })
+            .shadow({
+              radius: 8,
+              color: '#1E2A3040',
+              offsetX: 0,
+              offsetY: 3
+            })
+            .onClick(() => {
+              this.handleTileTapByValue(value)
+            })
+          }, (value: number) => value.toString())
 
           if (this.gameStatus === 'won') {
             this.ResultLayer()
@@ -133,7 +147,7 @@ export struct Game8TilePuzzlePage {
         .backgroundColor('#335C67')
         .borderRadius(16)
         .gesture(
-          PanGesture({ direction: PanDirection.All, distance: 18 })
+          PanGesture({ direction: PanDirection.All, distance: 12 })
             .onActionEnd((event) => {
               this.handleSwipe(event.offsetX, event.offsetY)
             })
@@ -154,14 +168,14 @@ export struct Game8TilePuzzlePage {
   }
 
   @Builder
-  StatBox(title: string, value: string, color: string) {
+  TimeBox() {
     Column() {
-      Text(title)
+      Text('TIME')
         .fontSize(10)
         .fontWeight(FontWeight.Bold)
         .fontColor('#F7F3E8')
 
-      Text(value)
+      Text(this.formatTime(this.elapsedSeconds))
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
         .fontColor(Color.White)
@@ -171,7 +185,30 @@ export struct Game8TilePuzzlePage {
     .height(46)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(color)
+    .backgroundColor('#335C67')
+    .borderRadius(6)
+    .margin({ left: 6 })
+  }
+
+  @Builder
+  BestBox() {
+    Column() {
+      Text('BEST')
+        .fontSize(10)
+        .fontWeight(FontWeight.Bold)
+        .fontColor('#F7F3E8')
+
+      Text(this.bestSeconds === 0 ? '--' : this.formatTime(this.bestSeconds))
+        .fontSize(18)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(Color.White)
+        .margin({ top: 2 })
+    }
+    .width(68)
+    .height(46)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor('#D95F4D')
     .borderRadius(6)
     .margin({ left: 6 })
   }
@@ -211,13 +248,18 @@ export struct Game8TilePuzzlePage {
   }
 
   private returnToMenu(): void {
+    this.stopTimer()
     this.onBackToMenu()
   }
 
   private startNewGame(): void {
-    this.moves = 0
+    this.animationId += 1
+    this.stopTimer()
+    this.elapsedSeconds = 0
+    this.startedAt = 0
     this.gameStatus = 'playing'
     this.resultMessage = ''
+    this.isAnimating = false
     this.boardValues = this.createShuffledBoard()
   }
 
@@ -249,8 +291,12 @@ export struct Game8TilePuzzlePage {
     return board
   }
 
+  private handleTileTapByValue(value: number): void {
+    this.handleTileTapByIndex(this.boardValues.indexOf(value))
+  }
+
   private handleTileTapByIndex(tileIndex: number): void {
-    if (this.gameStatus !== 'playing') {
+    if (this.gameStatus !== 'playing' || this.isAnimating) {
       return
     }
 
@@ -263,13 +309,13 @@ export struct Game8TilePuzzlePage {
   }
 
   private handleSwipe(offsetX: number, offsetY: number): void {
-    if (this.gameStatus !== 'playing') {
+    if (this.gameStatus !== 'playing' || this.isAnimating) {
       return
     }
 
     let absX = Math.abs(offsetX)
     let absY = Math.abs(offsetY)
-    if (absX < 20 && absY < 20) {
+    if (absX < 14 && absY < 14) {
       return
     }
 
@@ -313,17 +359,33 @@ export struct Game8TilePuzzlePage {
       return
     }
 
+    let moveId = ++this.animationId
     let nextBoard = this.boardValues.slice()
     nextBoard[emptyIndex] = value
     nextBoard[tileIndex] = 0
-    this.boardValues = nextBoard
-    this.moves += 1
 
-    if (this.isSolvedBoard(this.boardValues)) {
-      this.gameStatus = 'won'
-      this.resultMessage = 'Finished in ' + this.moves.toString() + ' moves.'
-      this.updateBestMoves()
-    }
+    this.isAnimating = true
+    this.startTimer()
+
+    animateTo({ duration: 120, curve: Curve.EaseOut }, () => {
+      this.boardValues = nextBoard
+    })
+
+    setTimeout(() => {
+      if (moveId !== this.animationId) {
+        return
+      }
+
+      this.isAnimating = false
+
+      if (this.isSolvedBoard(this.boardValues)) {
+        this.updateElapsedTime(true)
+        this.stopTimer()
+        this.gameStatus = 'won'
+        this.resultMessage = 'Finished in ' + this.formatTime(this.elapsedSeconds) + '.'
+        this.updateBestTime()
+      }
+    }, 125)
   }
 
   private tileColor(value: number): string {
@@ -347,10 +409,63 @@ export struct Game8TilePuzzlePage {
     }
   }
 
-  private updateBestMoves(): void {
-    if (this.bestMoves === 0 || this.moves < this.bestMoves) {
-      this.bestMoves = this.moves
+  private tileRow(value: number): number {
+    let index = this.boardValues.indexOf(value)
+    if (index < 0) {
+      return 0
     }
+    return Math.floor(index / 3)
+  }
+
+  private tileCol(value: number): number {
+    let index = this.boardValues.indexOf(value)
+    if (index < 0) {
+      return 0
+    }
+    return index % 3
+  }
+
+  private startTimer(): void {
+    if (this.timerId >= 0) {
+      return
+    }
+
+    this.startedAt = Date.now() - (this.elapsedSeconds * 1000)
+    this.timerId = setInterval(() => {
+      this.updateElapsedTime(false)
+    }, 1000)
+  }
+
+  private stopTimer(): void {
+    if (this.timerId < 0) {
+      return
+    }
+
+    clearInterval(this.timerId)
+    this.timerId = -1
+  }
+
+  private updateElapsedTime(roundUp: boolean): void {
+    if (this.startedAt <= 0) {
+      return
+    }
+
+    let elapsed = (Date.now() - this.startedAt) / 1000
+    this.elapsedSeconds = roundUp ? Math.max(1, Math.ceil(elapsed)) : Math.floor(elapsed)
+  }
+
+  private updateBestTime(): void {
+    if (this.bestSeconds === 0 || this.elapsedSeconds < this.bestSeconds) {
+      this.bestSeconds = this.elapsedSeconds
+    }
+  }
+
+  private formatTime(totalSeconds: number): string {
+    let minutes = Math.floor(totalSeconds / 60)
+    let seconds = totalSeconds % 60
+    let minuteText = minutes < 10 ? '0' + minutes.toString() : minutes.toString()
+    let secondText = seconds < 10 ? '0' + seconds.toString() : seconds.toString()
+    return minuteText + ':' + secondText
   }
 
   private getAdjacentIndexes(index: number): number[] {
