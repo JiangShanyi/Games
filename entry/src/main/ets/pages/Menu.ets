@@ -8,7 +8,7 @@ export struct MenuPage {
     Stack() {
       Column() {
         Column() {
-          Text('Mine Games Collection')
+          Text('Mini Games Collection')
             .fontSize(30)
             .fontWeight(FontWeight.Bold)
             .fontColor('#4B4038')
@@ -28,7 +28,7 @@ export struct MenuPage {
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
 
-            Text('Play')
+            Text('Start')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
               .fontColor(Color.White)
@@ -59,7 +59,7 @@ export struct MenuPage {
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
 
-            Text('Play')
+            Text('Start')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
               .fontColor(Color.White)
@@ -83,7 +83,7 @@ export struct MenuPage {
         Button() {
           Row() {
             Column() {
-              Text('8-Tile Puzzle')
+              Text('Sliding Puzzles')
                 .fontSize(28)
                 .fontWeight(FontWeight.Bold)
                 .fontColor('#253238')
@@ -91,7 +91,7 @@ export struct MenuPage {
             .alignItems(HorizontalAlign.Start)
             .layoutWeight(1)
 
-            Text('Play')
+            Text('Start')
               .fontSize(16)
               .fontWeight(FontWeight.Bold)
               .fontColor(Color.White)

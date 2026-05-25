@@ -1,6 +1,7 @@
 @Component
 export struct Game8TilePuzzlePage {
   onBackToMenu: () => void = () => {}
+  difficultyLevel: number = 1
   @State boardValues: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 0]
   @State elapsedSeconds: number = 0
   @State bestSeconds: number = 0
@@ -10,13 +11,7 @@ export struct Game8TilePuzzlePage {
   private animationId: number = 0
   private timerId: number = -1
   private startedAt: number = 0
-  private readonly TILE_SIZE: number = 88
-  private readonly TILE_GAP: number = 10
   private readonly BOARD_PADDING: number = 10
-  private readonly BOARD_SIZE: number = (this.TILE_SIZE * 3) + (this.TILE_GAP * 2) + (this.BOARD_PADDING * 2)
-  private readonly MOVE_DISTANCE: number = this.TILE_SIZE + this.TILE_GAP
-  private readonly boardIndexes: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-  private readonly tileValues: number[] = [1, 2, 3, 4, 5, 6, 7, 8]
 
   aboutToAppear(): void {
     this.startNewGame()
@@ -30,61 +25,57 @@ export struct Game8TilePuzzlePage {
     Stack() {
       Column() {
         Row() {
+          Button('<')
+            .width(48)
+            .height(48)
+            .fontSize(28)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#335C67')
+            .backgroundColor('#DCE7E1')
+            .borderRadius(24)
+            .onClick(() => {
+              this.returnToMenu()
+            })
+
           Column() {
-            Text('8-Tile')
+            Text('Sliding')
               .fontSize(44)
               .fontWeight(FontWeight.Bold)
               .fontColor('#253238')
 
-            Text('Puzzle')
+            Text('Puzzles')
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
               .fontColor('#D95F4D')
               .margin({ top: -4 })
           }
-          .alignItems(HorizontalAlign.Start)
+          .alignItems(HorizontalAlign.Center)
           .layoutWeight(1)
 
-          Row() {
-            this.TimeBox()
-            this.BestBox()
-          }
-          .alignItems(VerticalAlign.Center)
+          Blank()
+            .width(48)
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
 
         Row() {
+          this.TimeBox()
+          this.BestBox()
+
           Blank()
             .layoutWeight(1)
 
-          Row() {
-            Button('Menu')
-              .width(78)
-              .height(42)
-              .fontSize(14)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(Color.White)
-              .backgroundColor('#335C67')
-              .borderRadius(4)
-              .onClick(() => {
-                this.returnToMenu()
-              })
-
-            Button('New Puzzle')
-              .width(118)
-              .height(42)
-              .fontSize(14)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(Color.White)
-              .backgroundColor('#D95F4D')
-              .borderRadius(4)
-              .margin({ left: 8 })
-              .onClick(() => {
-                this.startNewGame()
-              })
-          }
-          .alignItems(VerticalAlign.Center)
+          Button('New Puzzle')
+            .width(118)
+            .height(42)
+            .fontSize(14)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(Color.White)
+            .backgroundColor('#D95F4D')
+            .borderRadius(4)
+            .onClick(() => {
+              this.startNewGame()
+            })
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
@@ -92,7 +83,7 @@ export struct Game8TilePuzzlePage {
 
         Stack() {
           Grid() {
-            ForEach(this.boardIndexes, (index: number) => {
+            ForEach(this.boardIndexes(), (index: number) => {
               GridItem() {
                 Column()
                   .width('100%')
@@ -102,29 +93,29 @@ export struct Game8TilePuzzlePage {
               }
             }, (index: number) => index.toString())
           }
-          .columnsTemplate('1fr 1fr 1fr')
-          .rowsTemplate('1fr 1fr 1fr')
-          .columnsGap(this.TILE_GAP)
-          .rowsGap(this.TILE_GAP)
+          .columnsTemplate(this.gridTemplate())
+          .rowsTemplate(this.gridTemplate())
+          .columnsGap(this.tileGap())
+          .rowsGap(this.tileGap())
           .width('100%')
           .height('100%')
 
-          ForEach(this.tileValues, (value: number) => {
+          ForEach(this.tileValues(), (value: number) => {
             Column() {
               Text(value.toString())
-                .fontSize(36)
+                .fontSize(this.tileFontSize())
                 .fontWeight(FontWeight.Bold)
                 .fontColor('#253238')
             }
-            .width(this.TILE_SIZE)
-            .height(this.TILE_SIZE)
+            .width(this.tileSize())
+            .height(this.tileSize())
             .justifyContent(FlexAlign.Center)
             .alignItems(HorizontalAlign.Center)
             .backgroundColor(this.tileColor(value))
             .borderRadius(10)
             .position({
-              x: this.tileCol(value) * this.MOVE_DISTANCE,
-              y: this.tileRow(value) * this.MOVE_DISTANCE
+              x: this.tileCol(value) * this.moveDistance(),
+              y: this.tileRow(value) * this.moveDistance()
             })
             .shadow({
               radius: 8,
@@ -141,8 +132,8 @@ export struct Game8TilePuzzlePage {
             this.ResultLayer()
           }
         }
-        .width(this.BOARD_SIZE)
-        .height(this.BOARD_SIZE)
+        .width(this.boardPixelSize())
+        .height(this.boardPixelSize())
         .padding(this.BOARD_PADDING)
         .backgroundColor('#335C67')
         .borderRadius(16)
@@ -264,11 +255,11 @@ export struct Game8TilePuzzlePage {
   }
 
   private createShuffledBoard(): number[] {
-    let board: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 0]
-    let emptyIndex = 8
+    let board: number[] = this.createSolvedBoard()
+    let emptyIndex = board.length - 1
     let previousEmptyIndex = -1
 
-    for (let step = 0; step < 90; step++) {
+    for (let step = 0; step < this.shuffleSteps(); step++) {
       let neighbors = this.getAdjacentIndexes(emptyIndex)
       let candidates: number[] = []
       for (let neighbor of neighbors) {
@@ -285,7 +276,9 @@ export struct Game8TilePuzzlePage {
     }
 
     if (this.isSolvedBoard(board)) {
-      board = [1, 2, 3, 4, 5, 6, 0, 7, 8]
+      let lastIndex = board.length - 1
+      board[lastIndex] = board[lastIndex - 1]
+      board[lastIndex - 1] = 0
     }
 
     return board
@@ -320,21 +313,22 @@ export struct Game8TilePuzzlePage {
     }
 
     let emptyIndex = this.boardValues.indexOf(0)
-    let emptyRow = Math.floor(emptyIndex / 3)
-    let emptyCol = emptyIndex % 3
+    let size = this.boardSize()
+    let emptyRow = Math.floor(emptyIndex / size)
+    let emptyCol = emptyIndex % size
     let tileIndex = -1
 
     if (absX > absY) {
-      if (offsetX < 0 && emptyCol < 2) {
+      if (offsetX < 0 && emptyCol < size - 1) {
         tileIndex = emptyIndex + 1
       } else if (offsetX > 0 && emptyCol > 0) {
         tileIndex = emptyIndex - 1
       }
     } else {
-      if (offsetY < 0 && emptyRow < 2) {
-        tileIndex = emptyIndex + 3
+      if (offsetY < 0 && emptyRow < size - 1) {
+        tileIndex = emptyIndex + size
       } else if (offsetY > 0 && emptyRow > 0) {
-        tileIndex = emptyIndex - 3
+        tileIndex = emptyIndex - size
       }
     }
 
@@ -414,7 +408,7 @@ export struct Game8TilePuzzlePage {
     if (index < 0) {
       return 0
     }
-    return Math.floor(index / 3)
+    return Math.floor(index / this.boardSize())
   }
 
   private tileCol(value: number): number {
@@ -422,7 +416,7 @@ export struct Game8TilePuzzlePage {
     if (index < 0) {
       return 0
     }
-    return index % 3
+    return index % this.boardSize()
   }
 
   private startTimer(): void {
@@ -470,19 +464,20 @@ export struct Game8TilePuzzlePage {
 
   private getAdjacentIndexes(index: number): number[] {
     let indexes: number[] = []
-    let row = Math.floor(index / 3)
-    let col = index % 3
+    let size = this.boardSize()
+    let row = Math.floor(index / size)
+    let col = index % size
 
     if (row > 0) {
-      indexes.push(index - 3)
+      indexes.push(index - size)
     }
-    if (row < 2) {
-      indexes.push(index + 3)
+    if (row < size - 1) {
+      indexes.push(index + size)
     }
     if (col > 0) {
       indexes.push(index - 1)
     }
-    if (col < 2) {
+    if (col < size - 1) {
       indexes.push(index + 1)
     }
 
@@ -494,21 +489,99 @@ export struct Game8TilePuzzlePage {
       return false
     }
 
-    let firstRow = Math.floor(firstIndex / 3)
-    let firstCol = firstIndex % 3
-    let secondRow = Math.floor(secondIndex / 3)
-    let secondCol = secondIndex % 3
+    let size = this.boardSize()
+    let firstRow = Math.floor(firstIndex / size)
+    let firstCol = firstIndex % size
+    let secondRow = Math.floor(secondIndex / size)
+    let secondCol = secondIndex % size
     let rowDistance = Math.abs(firstRow - secondRow)
     let colDistance = Math.abs(firstCol - secondCol)
     return rowDistance + colDistance === 1
   }
 
   private isSolvedBoard(board: number[]): boolean {
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < board.length - 1; i++) {
       if (board[i] !== i + 1) {
         return false
       }
     }
-    return board[8] === 0
+    return board[board.length - 1] === 0
+  }
+
+  private boardSize(): number {
+    if (this.difficultyLevel <= 0) {
+      return 3
+    }
+    if (this.difficultyLevel >= 2) {
+      return 5
+    }
+    return 4
+  }
+
+  private tileSize(): number {
+    let size = this.boardSize()
+    if (size === 3) {
+      return 88
+    }
+    if (size === 4) {
+      return 66
+    }
+    return 52
+  }
+
+  private tileGap(): number {
+    return this.boardSize() >= 5 ? 6 : 8
+  }
+
+  private moveDistance(): number {
+    return this.tileSize() + this.tileGap()
+  }
+
+  private boardPixelSize(): number {
+    let size = this.boardSize()
+    return (this.tileSize() * size) + (this.tileGap() * (size - 1)) + (this.BOARD_PADDING * 2)
+  }
+
+  private tileFontSize(): number {
+    if (this.boardSize() >= 5) {
+      return 25
+    }
+    return 34
+  }
+
+  private gridTemplate(): string {
+    let result = '1fr'
+    for (let i = 1; i < this.boardSize(); i++) {
+      result += ' 1fr'
+    }
+    return result
+  }
+
+  private boardIndexes(): number[] {
+    let indexes: number[] = []
+    let total = this.boardSize() * this.boardSize()
+    for (let i = 0; i < total; i++) {
+      indexes.push(i)
+    }
+    return indexes
+  }
+
+  private tileValues(): number[] {
+    let values: number[] = []
+    let total = this.boardSize() * this.boardSize()
+    for (let i = 1; i < total; i++) {
+      values.push(i)
+    }
+    return values
+  }
+
+  private createSolvedBoard(): number[] {
+    let values = this.tileValues()
+    values.push(0)
+    return values
+  }
+
+  private shuffleSteps(): number {
+    return 120
   }
 }

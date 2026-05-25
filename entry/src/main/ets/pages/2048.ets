@@ -114,6 +114,7 @@ export struct TileView {
 @Component
 export struct Game2048Page {
   onBackToMenu: () => void = () => {}
+  difficultyLevel: number = 1
   @State activeTiles: TileData[] = []
   @State score: number = 0
   @State bestScore: number = 0
@@ -138,10 +139,33 @@ export struct Game2048Page {
     Stack() {
       Column() {
         Row() {
+          Button('<')
+            .width(48)
+            .height(48)
+            .fontSize(28)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#776E65')
+            .backgroundColor('#EEE4DA')
+            .borderRadius(24)
+            .onClick(() => {
+              this.returnToMenu()
+            })
+
           Text('2048')
             .fontSize(56)
             .fontWeight(FontWeight.Bold)
             .fontColor('#776E65')
+            .textAlign(TextAlign.Center)
+            .layoutWeight(1)
+
+          Blank()
+            .width(48)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+
+        Row() {
+          Blank()
             .layoutWeight(1)
 
           Row() {
@@ -189,22 +213,9 @@ export struct Game2048Page {
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
+        .margin({ top: 10 })
 
         Row() {
-          Button() {
-            Text('Menu')
-              .fontSize(14)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(Color.White)
-          }
-          .layoutWeight(1)
-          .height(46)
-          .backgroundColor('#8F7A66')
-          .borderRadius(6)
-          .onClick(() => {
-            this.returnToMenu()
-          })
-
           Button() {
             Text('Undo')
               .fontSize(14)
@@ -215,7 +226,7 @@ export struct Game2048Page {
           .height(46)
           .backgroundColor('#8F7A66')
           .borderRadius(6)
-          .margin({ left: 10, right: 10 })
+          .margin({ right: 10 })
           .onClick(() => {
             this.undoMove()
           })
@@ -484,7 +495,7 @@ export struct Game2048Page {
 
     let randomPosition = Math.floor(Math.random() * emptyIndexes.length)
     let boardIndex = emptyIndexes[randomPosition]
-    let value = Math.random() < 0.9 ? 2 : 4
+    let value = Math.random() < this.twoTileChance() ? 2 : 4
 
     let newTile = new TileData(
       'tile_' + this.currentGameId + '_' + this.tileIdCounter++,
@@ -742,5 +753,15 @@ export struct Game2048Page {
       result.push(line[i])
     }
     return result
+  }
+
+  private twoTileChance(): number {
+    if (this.difficultyLevel <= 0) {
+      return 0.95
+    }
+    if (this.difficultyLevel >= 2) {
+      return 0.78
+    }
+    return 0.9
   }
 }
