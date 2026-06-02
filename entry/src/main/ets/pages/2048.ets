@@ -17,7 +17,7 @@ export class TileData {
   }
 }
 
-class BoardSnapshot {
+export class BoardSnapshot {
   values: number[];
   score: number;
   gameStatus: string;
@@ -30,6 +30,20 @@ class BoardSnapshot {
     this.gameStatus = gameStatus;
     this.resultTitle = resultTitle;
     this.resultMessage = resultMessage;
+  }
+}
+
+export class Game2048Cache {
+  difficultyLevel: number;
+  snapshot: BoardSnapshot;
+  undoStack: BoardSnapshot[];
+  bestScore: number;
+
+  constructor(difficultyLevel: number, snapshot: BoardSnapshot, undoStack: BoardSnapshot[], bestScore: number) {
+    this.difficultyLevel = difficultyLevel;
+    this.snapshot = snapshot;
+    this.undoStack = undoStack;
+    this.bestScore = bestScore;
   }
 }
 
@@ -114,7 +128,9 @@ export struct TileView {
 @Component
 export struct Game2048Page {
   onBackToMenu: () => void = () => {}
+  onCacheChange: (difficultyLevel: number, cache: Game2048Cache) => void = (difficultyLevel: number, cache: Game2048Cache) => {}
   difficultyLevel: number = 1
+  cache: Game2048Cache | null = null
   @State activeTiles: TileData[] = []
   @State score: number = 0
   @State bestScore: number = 0
@@ -132,7 +148,11 @@ export struct Game2048Page {
   private readonly BOARD_SIZE: number = (this.TILE_SIZE * 4) + (this.TILE_GAP * 3) + (this.BOARD_PADDING * 2)
 
   aboutToAppear(): void {
-    this.startNewGame()
+    if (this.cache !== null && this.cache.difficultyLevel === this.normalizedDifficulty()) {
+      this.restoreCache(this.cache)
+    } else {
+      this.startNewGame()
+    }
   }
 
   build() {
@@ -371,6 +391,9 @@ export struct Game2048Page {
   }
 
   private returnToMenu(): void {
+    this.onCacheChange(this.normalizedDifficulty(), this.createCache())
+    this.currentGameId += 1
+    this.isAnimating = false
     this.onBackToMenu()
   }
 
@@ -440,6 +463,35 @@ export struct Game2048Page {
       values.push(tile === null ? 0 : tile.value)
     }
     return new BoardSnapshot(values, this.score, this.gameStatus, this.resultTitle, this.resultMessage)
+  }
+
+  private createCache(): Game2048Cache {
+    return new Game2048Cache(
+      this.normalizedDifficulty(),
+      this.createSnapshot(),
+      this.copyBoardSnapshots(this.undoStack),
+      this.bestScore
+    )
+  }
+
+  private restoreCache(cache: Game2048Cache): void {
+    this.bestScore = cache.bestScore
+    this.undoStack = this.copyBoardSnapshots(cache.undoStack)
+    this.restoreSnapshot(cache.snapshot)
+  }
+
+  private copyBoardSnapshots(source: BoardSnapshot[]): BoardSnapshot[] {
+    let snapshots: BoardSnapshot[] = []
+    for (let snapshot of source) {
+      snapshots.push(new BoardSnapshot(
+        snapshot.values.slice(),
+        snapshot.score,
+        snapshot.gameStatus,
+        snapshot.resultTitle,
+        snapshot.resultMessage
+      ))
+    }
+    return snapshots
   }
 
   private restoreSnapshot(snapshot: BoardSnapshot): void {
@@ -763,5 +815,15 @@ export struct Game2048Page {
       return 0.78
     }
     return 0.9
+  }
+
+  private normalizedDifficulty(): number {
+    if (this.difficultyLevel <= 0) {
+      return 0
+    }
+    if (this.difficultyLevel >= 2) {
+      return 2
+    }
+    return 1
   }
 }

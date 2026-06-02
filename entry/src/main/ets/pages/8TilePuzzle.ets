@@ -1,7 +1,35 @@
+export class Game8TilePuzzleCache {
+  difficultyLevel: number;
+  boardValues: number[];
+  elapsedSeconds: number;
+  bestSeconds: number;
+  gameStatus: string;
+  resultMessage: string;
+
+  constructor(
+    difficultyLevel: number,
+    boardValues: number[],
+    elapsedSeconds: number,
+    bestSeconds: number,
+    gameStatus: string,
+    resultMessage: string
+  ) {
+    this.difficultyLevel = difficultyLevel;
+    this.boardValues = boardValues;
+    this.elapsedSeconds = elapsedSeconds;
+    this.bestSeconds = bestSeconds;
+    this.gameStatus = gameStatus;
+    this.resultMessage = resultMessage;
+  }
+}
+
 @Component
 export struct Game8TilePuzzlePage {
   onBackToMenu: () => void = () => {}
+  onCacheChange: (difficultyLevel: number, cache: Game8TilePuzzleCache) => void =
+    (difficultyLevel: number, cache: Game8TilePuzzleCache) => {}
   difficultyLevel: number = 1
+  cache: Game8TilePuzzleCache | null = null
   @State boardValues: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 0]
   @State elapsedSeconds: number = 0
   @State bestSeconds: number = 0
@@ -14,7 +42,11 @@ export struct Game8TilePuzzlePage {
   private readonly BOARD_PADDING: number = 10
 
   aboutToAppear(): void {
-    this.startNewGame()
+    if (this.cache !== null && this.cache.difficultyLevel === this.normalizedDifficulty()) {
+      this.restoreCache(this.cache)
+    } else {
+      this.startNewGame()
+    }
   }
 
   aboutToDisappear(): void {
@@ -239,6 +271,12 @@ export struct Game8TilePuzzlePage {
   }
 
   private returnToMenu(): void {
+    if (this.timerId >= 0) {
+      this.updateElapsedTime(false)
+    }
+    this.onCacheChange(this.normalizedDifficulty(), this.createCache())
+    this.animationId += 1
+    this.isAnimating = false
     this.stopTimer()
     this.onBackToMenu()
   }
@@ -252,6 +290,33 @@ export struct Game8TilePuzzlePage {
     this.resultMessage = ''
     this.isAnimating = false
     this.boardValues = this.createShuffledBoard()
+  }
+
+  private createCache(): Game8TilePuzzleCache {
+    return new Game8TilePuzzleCache(
+      this.normalizedDifficulty(),
+      this.boardValues.slice(),
+      this.elapsedSeconds,
+      this.bestSeconds,
+      this.gameStatus,
+      this.resultMessage
+    )
+  }
+
+  private restoreCache(cache: Game8TilePuzzleCache): void {
+    this.animationId += 1
+    this.stopTimer()
+    this.boardValues = cache.boardValues.slice()
+    this.elapsedSeconds = cache.elapsedSeconds
+    this.bestSeconds = cache.bestSeconds
+    this.gameStatus = cache.gameStatus
+    this.resultMessage = cache.resultMessage
+    this.isAnimating = false
+    this.startedAt = 0
+
+    if (this.gameStatus === 'playing' && this.elapsedSeconds > 0) {
+      this.startTimer()
+    }
   }
 
   private createShuffledBoard(): number[] {
@@ -383,23 +448,55 @@ export struct Game8TilePuzzlePage {
   }
 
   private tileColor(value: number): string {
-    switch (value) {
-      case 1:
+    switch ((value - 1) % 24) {
+      case 0:
         return '#E7F0EF'
-      case 2:
+      case 1:
         return '#F5D7C3'
-      case 3:
+      case 2:
         return '#D8E8C4'
-      case 4:
+      case 3:
         return '#CFE0F3'
-      case 5:
+      case 4:
         return '#F1C3BC'
-      case 6:
+      case 5:
         return '#F2DF8C'
-      case 7:
+      case 6:
         return '#BFDCD6'
-      default:
+      case 7:
         return '#E7D4F3'
+      case 8:
+        return '#F6E6A8'
+      case 9:
+        return '#CDE9D8'
+      case 10:
+        return '#FFD2A6'
+      case 11:
+        return '#C8D9F4'
+      case 12:
+        return '#F7C9D9'
+      case 13:
+        return '#D7E8A8'
+      case 14:
+        return '#BFE8F0'
+      case 15:
+        return '#E6CCB3'
+      case 16:
+        return '#D5C5F0'
+      case 17:
+        return '#F4D6A0'
+      case 18:
+        return '#C6E0B4'
+      case 19:
+        return '#F0C2A8'
+      case 20:
+        return '#B9D4C7'
+      case 21:
+        return '#EBC8E4'
+      case 22:
+        return '#C7E6F7'
+      default:
+        return '#F0E0B8'
     }
   }
 
@@ -516,6 +613,16 @@ export struct Game8TilePuzzlePage {
       return 5
     }
     return 4
+  }
+
+  private normalizedDifficulty(): number {
+    if (this.difficultyLevel <= 0) {
+      return 0
+    }
+    if (this.difficultyLevel >= 2) {
+      return 2
+    }
+    return 1
   }
 
   private tileSize(): number {

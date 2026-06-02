@@ -1,7 +1,50 @@
+export class TicTacToeCache {
+  cacheKey: string;
+  mode: string;
+  selectedBotLevel: string;
+  board: string[];
+  isXNext: boolean;
+  winner: string;
+  scoreX: number;
+  scoreO: number;
+  draws: number;
+  lastMoveIndex: number;
+  winningIndexes: number[];
+
+  constructor(
+    cacheKey: string,
+    mode: string,
+    selectedBotLevel: string,
+    board: string[],
+    isXNext: boolean,
+    winner: string,
+    scoreX: number,
+    scoreO: number,
+    draws: number,
+    lastMoveIndex: number,
+    winningIndexes: number[]
+  ) {
+    this.cacheKey = cacheKey;
+    this.mode = mode;
+    this.selectedBotLevel = selectedBotLevel;
+    this.board = board;
+    this.isXNext = isXNext;
+    this.winner = winner;
+    this.scoreX = scoreX;
+    this.scoreO = scoreO;
+    this.draws = draws;
+    this.lastMoveIndex = lastMoveIndex;
+    this.winningIndexes = winningIndexes;
+  }
+}
+
 @Component
 export struct TicTacToePage {
   onBackToMenu: () => void = () => {}
+  onCacheChange: (cacheKey: string, cache: TicTacToeCache) => void = (cacheKey: string, cache: TicTacToeCache) => {}
   launchMode: string = 'medium'
+  cacheKey: string = 'medium'
+  cache: TicTacToeCache | null = null
 
   @State mode: string = 'medium'
   @State selectedBotLevel: string = 'medium'
@@ -18,7 +61,11 @@ export struct TicTacToePage {
   private botMoveId: number = 0
 
   aboutToAppear(): void {
-    this.startMode(this.launchMode)
+    if (this.cache !== null && this.cache.cacheKey === this.cacheKey) {
+      this.restoreCache(this.cache)
+    } else {
+      this.startMode(this.launchMode)
+    }
   }
 
   build() {
@@ -255,12 +302,15 @@ export struct TicTacToePage {
         .height('100%')
         .backgroundColor('#F2CDBB')
 
-      Row() {
+      Column() {
         this.ScorePill()
+        this.ClearPointsButton()
       }
       .width('100%')
       .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
       .position({ x: 0, y: 108 })
+      .zIndex(4)
 
       Text('Tic Tac Toe')
         .width('100%')
@@ -269,6 +319,7 @@ export struct TicTacToePage {
         .fontColor('#253238')
         .textAlign(TextAlign.Center)
         .position({ x: 0, y: 48 })
+        .zIndex(3)
 
       Column() {
         Blank()
@@ -293,12 +344,29 @@ export struct TicTacToePage {
         .backgroundColor('#EAF7FF')
         .borderRadius(25)
         .position({ x: 22, y: 42 })
+        .zIndex(5)
         .onClick(() => {
           this.returnToModeSelect()
         })
     }
     .width('100%')
     .height('100%')
+  }
+
+  @Builder
+  ClearPointsButton() {
+    Button('Clear')
+      .width(68)
+      .height(42)
+      .fontSize(13)
+      .fontWeight(FontWeight.Bold)
+      .fontColor('#2F2D33')
+      .backgroundColor('#EAF7FF')
+      .borderRadius(21)
+      .margin({ top: 8 })
+      .onClick(() => {
+        this.clearPoints()
+      })
   }
 
   @Builder
@@ -534,23 +602,59 @@ export struct TicTacToePage {
   }
 
   private returnToModeSelect(): void {
-    this.mode = 'select'
-    this.resetScores()
-    this.resetRound()
+    this.onCacheChange(this.cacheKey, this.createCache())
+    this.botMoveId += 1
     this.onBackToMenu()
   }
 
   private returnToMenu(): void {
-    this.mode = 'select'
-    this.resetScores()
-    this.resetRound()
+    this.onCacheChange(this.cacheKey, this.createCache())
+    this.botMoveId += 1
     this.onBackToMenu()
+  }
+
+  private createCache(): TicTacToeCache {
+    return new TicTacToeCache(
+      this.cacheKey,
+      this.cacheMode(),
+      this.selectedBotLevel,
+      this.board.slice(),
+      this.isXNext,
+      this.winner,
+      this.scoreX,
+      this.scoreO,
+      this.draws,
+      this.lastMoveIndex,
+      this.winningIndexes.slice()
+    )
+  }
+
+  private restoreCache(cache: TicTacToeCache): void {
+    this.botMoveId += 1
+    this.mode = cache.mode
+    this.selectedBotLevel = cache.selectedBotLevel
+    this.board = cache.board.slice()
+    this.isXNext = cache.isXNext
+    this.winner = cache.winner
+    this.scoreX = cache.scoreX
+    this.scoreO = cache.scoreO
+    this.draws = cache.draws
+    this.lastMoveIndex = cache.lastMoveIndex
+    this.winningIndexes = cache.winningIndexes.slice()
+
+    if (this.isBotTurn()) {
+      this.scheduleBotMove()
+    }
   }
 
   private resetScores(): void {
     this.scoreX = 0
     this.scoreO = 0
     this.draws = 0
+  }
+
+  private clearPoints(): void {
+    this.resetScores()
   }
 
   private resetRound(): void {
@@ -779,6 +883,20 @@ export struct TicTacToePage {
 
   private isBotGame(): boolean {
     return this.mode === 'easy' || this.mode === 'medium' || this.mode === 'hard'
+  }
+
+  private cacheMode(): string {
+    if (this.mode === 'easy' || this.mode === 'medium' || this.mode === 'hard' || this.mode === 'two') {
+      return this.mode
+    }
+    return this.normalizedLaunchMode()
+  }
+
+  private normalizedLaunchMode(): string {
+    if (this.launchMode === 'easy' || this.launchMode === 'medium' || this.launchMode === 'hard' || this.launchMode === 'two') {
+      return this.launchMode
+    }
+    return 'medium'
   }
 
   private isBotTurn(): boolean {
