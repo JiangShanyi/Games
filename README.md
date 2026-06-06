@@ -1,8 +1,14 @@
 # HarmonyGame
 
-A simple 2048 game built with HarmonyOS ArkTS.
+A small HarmonyOS ArkTS game collection.
 
 ## Overview
+
+The menu and game pages live in:
+
+```text
+entry/src/main/ets/pages/
+```
 
 The current version includes:
 
@@ -11,13 +17,30 @@ The current version includes:
 - Tile merging and new tile spawning
 - Real-time score updates
 - Best score tracking during the app session
-- Win screen when a 2048 tile is created
-- Lose screen when no valid moves remain
-- New game / restart
+- Win screen
+- Lose screen
+- New game / restart support
+- Tic Tac Toe with friend and bot modes
+- Easy, medium, and hard bot levels
+- Sliding Puzzles with 3 x 3, 4 x 4, and 5 x 5 boards
+- Tap and swipe controls for moving puzzle tiles
+- Timer and best-time tracking during the app session
+- Ring Sort with color-coded rings, rod stations, and endless difficulty progressions
 
-## Development Notes
+## Project Structure
 
-- `score` and `bestScore` are ArkUI `@State` values and are rendered directly in the page so they refresh during gameplay.
-- `gameStatus` controls whether the game is currently playing, won, or lost.
-- `currentGameId` prevents delayed animation callbacks from an old game from affecting a newly restarted board.
-- Tile IDs include the current game id so ArkUI does not reuse old tile views after reset.
+```text
+HarmonyGame/
+  entry/
+    src/
+      main/
+        ets/
+          pages/
+            2048.ets
+            8TilePuzzle.ets
+            Index.ets
+            Menu.ets
+            StartPage.ets
+            TicTacToe.ets
+            RingSort.ets
+```
